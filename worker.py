@@ -9,7 +9,7 @@ from threading import Thread, Lock
 
 
 import openpyxl
-queue_to_produce = Queue()
+queue_to_consume = Queue()
 # данный лист нужны только для мониторинга, по-хорошему он не нужен, лишний расход памяти
 monitoring_list = {}
 
@@ -24,7 +24,7 @@ class Worker(Thread):
     def run(self):
         print(f"запущен поток {self.name}")
         while True:
-            item = queue_to_produce.get()
+            item = queue_to_consume.get()
             print(f"Начало работы над элементом с id {item['id']} by {self.name} "
                   f" в {datetime.datetime.now().strftime('%d.%m.%Y %H:%M:%S')}")
             item["worker"] = f"Worker{self.name}"
@@ -48,7 +48,7 @@ class Worker(Thread):
             # блокируем словарь для выполнения не атомарных операций
             with lock:
                 monitoring_list[item["id"]]["end_date"] = datetime.datetime.now().strftime('%d.%m.%Y %H:%M:%S')
-            queue_to_produce.task_done()
+            queue_to_consume.task_done()
             print(f"Конец работы над элементом с id {item['id']} by {self.name}"
                   f" в {datetime.datetime.now().strftime('%d.%m.%Y %H:%M:%S')}")
 

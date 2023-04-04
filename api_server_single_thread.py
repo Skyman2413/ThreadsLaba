@@ -7,7 +7,7 @@ from queue import Queue
 from http.server import HTTPServer, BaseHTTPRequestHandler
 from threading import Thread, Lock
 
-from worker import Worker, monitoring_list, queue_to_produce
+from worker import Worker, monitoring_list, queue_to_consume
 
 max_id = 0
 sample_queue_element = {
@@ -82,7 +82,7 @@ class MyHHTPRequestHandler(BaseHTTPRequestHandler):
             new_element = {"org_name": json_body["org_name"], "date": json_body["date"],
                            "product_list": json_body["product_list"], "state": "new", "worker": "",
                            "id": id}
-            queue_to_produce.put(new_element)
+            queue_to_consume.put(new_element)
             response_body = {"id": new_element["id"]}
             response_body = json.dumps(response_body)
 
