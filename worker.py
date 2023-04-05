@@ -10,7 +10,7 @@ from threading import Thread, Lock
 
 import openpyxl
 queue_to_consume = Queue()
-# данный лист нужны только для мониторинга, по-хорошему он не нужен, лишний расход памяти
+# данный словарь нужны только для мониторинга, по-хорошему он не нужен, лишний расход памяти
 monitoring_list = {}
 
 class Worker(Thread):
