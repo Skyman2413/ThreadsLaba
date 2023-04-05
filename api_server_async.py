@@ -20,8 +20,15 @@ routes = web.RouteTableDef()
 
 @routes.get('/get_file')
 async def get_file(request):
-    pass
-
+    try:
+        s = await request.json()
+        id = s["id"]
+        if not os.path.exists(Path(os.getcwd(), "files_to_send", f"{id}.xlsx")):
+            return web.HTTPFound
+        return web.FileResponse(path=Path(os.getcwd(), "files_to_send", f"{id}.xlsx"), status=200)
+    except Exception as e:
+        logging.info(e)
+        return web.HTTPBadRequest
 
 @routes.get('/queue_info')
 async def get_queue_info(request):
@@ -41,21 +48,18 @@ async def post_add_item(request):
                        "product_list": s["product_list"], "state": "new", "worker": "",
                        "created_at":datetime.now().strftime('%d.%m.%Y %H:%M:%S'),
                        "id": id}
-        print("Добавление элемента в очередь" + str(new_element))
+        logging.info("Добавление элемента в очередь" + str(new_element))
         await queue_to_consume.put(new_element)
         response_body = {"id": new_element["id"]}
-        lock = Lock()
+        lock = asyncio.Lock()
         # блокируем словарь для выполнения не атомарных операций
         await lock.acquire()
         monitoring_list[id] = new_element
         lock.release()
         await asyncio.sleep(2)
     except Exception as e:
-        print(e)
-        status_code = 400
-        new_element = {}
-    if len(new_element) == 0:
-        response_body = {}
+        logging.info(e)
+        return web.HTTPBadRequest
     return web.json_response(status=status_code, data=response_body)
 
 
@@ -63,7 +67,7 @@ async def post_add_item(request):
 async def worker(name: str):
     while True:
         item = await queue_to_consume.get()
-        print(f"Начало работы над элементом с id {item['id']} by {name} "
+        logging.info(f"Начало работы над элементом с id {item['id']} by {name} "
                     f" в {datetime.now().strftime('%d.%m.%Y %H:%M:%S')}")
         item["worker"] = f"Worker{name}"
         item["state"] = "in_progress"
@@ -104,7 +108,7 @@ async def worker(name: str):
             monitoring_list[item["id"]]["state"] = "Done Successfully"
             lock.release()
         except Exception as e:
-            print(e)
+            logging.info(e)
             # блокируем словарь для выполнения не атомарных операций
             await lock.acquire()
             monitoring_list[item["id"]]["state"] = "Error"
@@ -114,13 +118,14 @@ async def worker(name: str):
         monitoring_list[item["id"]]["end_date"] = datetime.now().strftime('%d.%m.%Y %H:%M:%S')
         lock.release()
         queue_to_consume.task_done()
-        print(f"Конец работы над элементом с id {item['id']} by {name}"
+        logging.info(f"Конец работы над элементом с id {item['id']} by {name}"
                     f" в {datetime.now().strftime('%d.%m.%Y %H:%M:%S')}")
 
 
 async def main():
-    print("start")
-    app = web.Application()
+    app = web.Application(debug=True)
+    logging.basicConfig(level=logging.DEBUG)
+    logging.info("start")
     app.add_routes([web.get('/get_file', get_file)])
     app.add_routes([web.get('/queue_info', get_queue_info)])
     app.add_routes([web.post('/add_item', post_add_item)])
