@@ -3,7 +3,7 @@ import logging
 import os
 import shutil
 from threading import Lock, Thread
-from asyncio import Queue
+from asyncio import Queue, AbstractEventLoop
 from datetime import datetime
 import time
 from pathlib import Path
@@ -15,7 +15,7 @@ max_id = 0
 queue_to_consume = Queue()
 monitoring_list = {}
 routes = web.RouteTableDef()
-loop = None
+loop = AbstractEventLoop()
 
 @routes.get('/get_file')
 async def get_file(request):
