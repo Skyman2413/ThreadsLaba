@@ -29,6 +29,7 @@ async def get_file(request):
         logging.info(e)
         return web.HTTPBadRequest
 
+
 @routes.get('/queue_info')
 async def get_queue_info(request):
     return web.json_response(monitoring_list)
@@ -45,7 +46,7 @@ async def post_add_item(request):
         id = max_id
         new_element = {"org_name": s["org_name"], "date": s["date"],
                        "product_list": s["product_list"], "state": "new", "worker": "",
-                       "created_at":datetime.now().strftime('%d.%m.%Y %H:%M:%S'),
+                       "created_at": datetime.now().strftime('%d.%m.%Y %H:%M:%S'),
                        "id": id}
         logging.info("Добавление элемента в очередь" + str(new_element))
         await queue_to_consume.put(new_element)
@@ -67,7 +68,7 @@ async def worker(name: str):
     while True:
         item = await queue_to_consume.get()
         logging.info(f"Начало работы над элементом с id {item['id']} by {name} "
-                    f" в {datetime.now().strftime('%d.%m.%Y %H:%M:%S')}")
+                     f" в {datetime.now().strftime('%d.%m.%Y %H:%M:%S')}")
         item["worker"] = f"Worker{name}"
         item["state"] = "in_progress"
         lock = Lock()
@@ -118,7 +119,7 @@ async def worker(name: str):
         lock.release()
         queue_to_consume.task_done()
         logging.info(f"Конец работы над элементом с id {item['id']} by {name}"
-                    f" в {datetime.now().strftime('%d.%m.%Y %H:%M:%S')}")
+                     f" в {datetime.now().strftime('%d.%m.%Y %H:%M:%S')}")
 
 
 async def main():

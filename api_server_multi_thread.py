@@ -109,7 +109,6 @@ class MyHHTPRequestHandler(BaseHTTPRequestHandler):
             self.wfile.write(bytes(response_body, "utf-8"))
 
 
-
 if __name__ == "__main__":
     worker_count = 8
     threads = []
@@ -117,7 +116,7 @@ if __name__ == "__main__":
 
     t = Thread(target=httpd.serve_forever)
 
-    for i in range(1, worker_count+1):
+    for i in range(1, worker_count + 1):
         worker = Worker(name=f"Worker{i}")
         threads.append(worker)
     threads.append(t)
