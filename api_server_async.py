@@ -5,7 +5,6 @@ import shutil
 from asyncio import Queue, Lock
 from datetime import datetime
 from pathlib import Path
-import random
 import openpyxl
 from aiohttp import web
 
