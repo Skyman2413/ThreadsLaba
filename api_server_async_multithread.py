@@ -2,21 +2,22 @@ import asyncio
 import logging
 import os
 import shutil
-from asyncio import Queue, Lock
+from threading import Lock, Thread
+from asyncio import Queue
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
+import time
 from pathlib import Path
 import random
 import openpyxl
 from aiohttp import web
 
-'''
-Вопрос к ребятам - почему воркер работает так медленно
-'''
+index = 0
 max_id = 0
 queue_to_consume = Queue()
 monitoring_list = {}
 routes = web.RouteTableDef()
-
+loop = None
 
 @routes.get('/get_file')
 async def get_file(request):
@@ -44,7 +45,7 @@ async def post_add_item(request):
         print("Добавление элемента в очередь" + str(new_element))
         await queue_to_consume.put(new_element)
         response_body = {"id": new_element["id"]}
-        lock = Lock()
+        lock = asyncio.Lock()
         # блокируем словарь для выполнения не атомарных операций
         await lock.acquire()
         monitoring_list[id] = new_element
@@ -60,16 +61,16 @@ async def post_add_item(request):
 
 
 # исполнитель, генерирующий файлы (consumer)
-async def worker(name: str):
+def worker(name: str):
     while True:
-        item = await queue_to_consume.get()
+        item = asyncio.run_coroutine_threadsafe(queue_to_consume.get(), loop).result()
         print(f"Начало работы над элементом с id {item['id']} by {name} "
                     f" в {datetime.now().strftime('%d.%m.%Y %H:%M:%S')}")
         item["worker"] = f"Worker{name}"
         item["state"] = "in_progress"
         lock = Lock()
         # блокируем словарь для выполнения не атомарных операций
-        await lock.acquire()
+        lock.acquire()
         monitoring_list[item["id"]]["state"] = "in progress"
         monitoring_list[item["id"]]["worker"] = name
         monitoring_list[item["id"]]["start_date"] = datetime.now().strftime('%d.%m.%Y %H:%M:%S')
@@ -98,19 +99,19 @@ async def worker(name: str):
             ws["M16"].value = all_sum
             wb.save(path_to_excel)
             wb.close()
-            await asyncio.sleep(3)
+            time.sleep(3)
             # блокируем словарь для выполнения не атомарных операций
-            await lock.acquire()
+            lock.acquire()
             monitoring_list[item["id"]]["state"] = "Done Successfully"
             lock.release()
         except Exception as e:
             print(e)
             # блокируем словарь для выполнения не атомарных операций
-            await lock.acquire()
+            lock.acquire()
             monitoring_list[item["id"]]["state"] = "Error"
             lock.release()
         # блокируем словарь для выполнения не атомарных операций
-        await lock.acquire()
+        lock.acquire()
         monitoring_list[item["id"]]["end_date"] = datetime.now().strftime('%d.%m.%Y %H:%M:%S')
         lock.release()
         queue_to_consume.task_done()
@@ -119,17 +120,23 @@ async def worker(name: str):
 
 
 async def main():
+    global loop
     print("start")
+    loop = asyncio.get_running_loop()
     app = web.Application()
     app.add_routes([web.get('/get_file', get_file)])
     app.add_routes([web.get('/queue_info', get_queue_info)])
     app.add_routes([web.post('/add_item', post_add_item)])
-    producers = [asyncio.create_task(worker(f"Worker {i}")) for i in range(3)]
     runner = web.AppRunner(app)
     await runner.setup()
     site = web.TCPSite(runner, 'localhost', 8080)
     await site.start()
-    await asyncio.gather(*producers)
+    loop = asyncio.get_running_loop()
+    max_consumers = 2
+    consumers = [Thread(target=worker, kwargs={"name": f"Worker {i}"}) for i in range(max_consumers)]
+    for t in consumers:
+        t.start()
+
     while True:
         await asyncio.sleep(3600)
 
