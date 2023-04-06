@@ -135,7 +135,7 @@ async def main():
     app.add_routes([web.get('/get_file', get_file)])
     app.add_routes([web.get('/queue_info', get_queue_info)])
     app.add_routes([web.post('/add_item', post_add_item)])
-    producers = [asyncio.create_task(worker(f"Worker {i + 1}")) for i in range(3)]
+    producers = [asyncio.create_task(worker(f"Worker {i + 1}")) for i in range(10)]
     runner = web.AppRunner(app)
     await runner.setup()
     site = web.TCPSite(runner, 'localhost', 8080)
