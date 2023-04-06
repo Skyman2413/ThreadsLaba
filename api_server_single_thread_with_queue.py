@@ -83,9 +83,9 @@ class MyHHTPRequestHandler(BaseHTTPRequestHandler):
                            "product_list": json_body["product_list"], "state": "new", "worker": "",
                            "id": id}
             # для очереди
-            # queue_to_consume.put(new_element)
-            '''response_body = {"id": new_element["id"]}
-            response_body = json.dumps(response_body)'''
+            queue_to_consume.put(new_element)
+            response_body = {"id": new_element["id"]}
+            response_body = json.dumps(response_body)
 
             lock = Lock()
             # блокируем словарь для выполнения не атомарных операций
@@ -107,29 +107,17 @@ class MyHHTPRequestHandler(BaseHTTPRequestHandler):
         print(str(new_element) + "\r\n")
 
         # для очереди
-        '''self.send_response(status_code, status_info)
+        self.send_response(status_code, status_info)
         self.send_header("Content-type", "application/json")
         self.end_headers()
-        self.wfile.write(bytes(response_body, "utf-8"))'''
-        worker.worker_without_thread(item=new_element)
-        if not os.path.exists(Path(os.getcwd(), "files_to_send", f"{new_element['id']}.xlsx")):
-            status_code = 404
-            status_info = "Not found"
-        self.send_response(status_code, status_info)
-        self.send_header('Content-type', 'application/xlsx')
-        self.send_header('Content-Disposition', f'attachment; filename="{new_element["id"]}.xlsx"')
-        self.end_headers()
-        if status_code == 200:
-            with open(Path(os.getcwd(), "files_to_send", f"{new_element['id']}.xlsx"), 'rb') as file:
-                self.wfile.write(file.read())
+        self.wfile.write(bytes(response_body, "utf-8"))
 
 
 if __name__ == "__main__":
     threads = []
     httpd = HTTPServer(("localhost", 8080), MyHHTPRequestHandler)
-    httpd.serve_forever()
     # для очереди
-    '''worker_count = 8
+    worker_count = 2
     t = Thread(target=httpd.serve_forever)
 
     for i in range(1, worker_count+1):
@@ -140,4 +128,4 @@ if __name__ == "__main__":
     for thread in threads:
         thread.start()
     for thread in threads:
-        thread.join()'''
+        thread.join()

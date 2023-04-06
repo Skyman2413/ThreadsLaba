@@ -2,9 +2,11 @@ import asyncio
 import logging
 import os
 import shutil
+import time
 from asyncio import Queue, Lock
 from datetime import datetime
 from pathlib import Path
+import random
 import openpyxl
 from aiohttp import web
 
@@ -118,18 +120,20 @@ async def worker(name: str):
         monitoring_list[item["id"]]["end_date"] = datetime.now().strftime('%d.%m.%Y %H:%M:%S')
         lock.release()
         queue_to_consume.task_done()
+        # await asyncio.sleep(random.randint(5, 25))
+        time.sleep(random.randint(5, 25))
         logging.info(f"Конец работы над элементом с id {item['id']} by {name}"
                      f" в {datetime.now().strftime('%d.%m.%Y %H:%M:%S')}")
 
 
 async def main():
     app = web.Application(debug=True)
-    logging.basicConfig(level=logging.DEBUG)
+    logging.basicConfig(level=logging.INFO)
     logging.info("start")
     app.add_routes([web.get('/get_file', get_file)])
     app.add_routes([web.get('/queue_info', get_queue_info)])
     app.add_routes([web.post('/add_item', post_add_item)])
-    producers = [asyncio.create_task(worker(f"Worker {i}")) for i in range(3)]
+    producers = [asyncio.create_task(worker(f"Worker {i + 1}")) for i in range(3)]
     runner = web.AppRunner(app)
     await runner.setup()
     site = web.TCPSite(runner, 'localhost', 8080)
