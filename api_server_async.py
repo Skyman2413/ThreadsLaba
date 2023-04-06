@@ -25,7 +25,9 @@ async def get_file(request):
         s = await request.json()
         id = s["id"]
         if not os.path.exists(Path(os.getcwd(), "files_to_send", f"{id}.xlsx")):
-            return web.HTTPFound
+            if id > max_id:
+                return web.HTTPNotFound
+            return web.HTTPAccepted
         return web.FileResponse(path=Path(os.getcwd(), "files_to_send", f"{id}.xlsx"), status=200)
     except Exception as e:
         logging.info(e)
@@ -41,9 +43,9 @@ async def get_queue_info(request):
 @routes.post('/add_item')
 async def post_add_item(request):
     global max_id
-    s = await request.json()
     status_code = 200
     try:
+        s = await request.json()
         max_id = max_id + 1
         id = max_id
         new_element = {"org_name": s["org_name"], "date": s["date"],

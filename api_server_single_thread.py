@@ -24,35 +24,6 @@ class MyHHTPRequestHandler(BaseHTTPRequestHandler):
     # Обработчик GET запроса. В нашей программе таких будет 2 - просмотреть всю очередь
     # и получить сформированный файл
     def do_GET(self):
-        if self.path == "/get_file":
-            # Задание для студентов - реализовать обработку получения файла из готовой очереди
-            status_code = 200
-            status_info = "OK"
-            content_length = int(self.headers['Content-Length'])
-            body = self.rfile.read(content_length)
-            json_body = {}
-            if self.headers["Content-Type"].lower() not in ("text/json", "application/json"):
-                status_code = 405
-                status_info = "Method Not Allowed"
-            try:
-                json_body = json.loads(body)
-
-            except Exception as e:
-                print(e)
-                status_code = 400
-                status_info = "Bad Request"
-            pass
-            if status_code == 200:
-                if not os.path.exists(Path(os.getcwd(), "files_to_send", f"{json_body['id']}.xlsx")):
-                    status_code = 404
-                    status_info = "Not found"
-            self.send_response(status_code, status_info)
-            self.send_header('Content-type', 'application/xlsx')
-            self.send_header('Content-Disposition', f'attachment; filename="{json_body["id"]}.xlsx"')
-            self.end_headers()
-            if status_code == 200:
-                with open(Path(os.getcwd(), "files_to_send", f"{json_body['id']}.xlsx"), 'rb') as file:
-                    self.wfile.write(file.read())
         if self.path == "/queue_info":
             pass
             status_code = 200
