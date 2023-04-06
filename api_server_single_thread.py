@@ -106,11 +106,23 @@ class MyHHTPRequestHandler(BaseHTTPRequestHandler):
         print("Получен элемент\r\n")
         print(str(new_element) + "\r\n")
 
-        self.send_response(status_code, status_info)
+        # для очереди
+        '''self.send_response(status_code, status_info)
         self.send_header("Content-type", "application/json")
         self.end_headers()
-        self.wfile.write(bytes(response_body, "utf-8"))
+        self.wfile.write(bytes(response_body, "utf-8"))'''
         worker.worker_without_thread(item=new_element)
+        if not os.path.exists(Path(os.getcwd(), "files_to_send", f"{new_element['id']}.xlsx")):
+            status_code = 404
+            status_info = "Not found"
+        self.send_response(status_code, status_info)
+        self.send_header('Content-type', 'application/xlsx')
+        self.send_header('Content-Disposition', f'attachment; filename="{new_element["id"]}.xlsx"')
+        self.end_headers()
+        if status_code == 200:
+            with open(Path(os.getcwd(), "files_to_send", f"{new_element['id']}.xlsx"), 'rb') as file:
+                self.wfile.write(file.read())
+
 
 if __name__ == "__main__":
     threads = []
